@@ -1,9 +1,10 @@
+import { WITME_LENS_CDN } from "@/lib/cdn-assets";
 import { cn } from "@/lib/utils";
 
 export function Wordmark({ className }: { className?: string }) {
   return (
     <img
-      src="/branding/witme-lens.png"
+      src={WITME_LENS_CDN.logoBlack}
       alt="Witme Lens"
       width={813}
       height={123}

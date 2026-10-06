@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Lexend } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { WITME_LENS_CDN } from "@/lib/cdn-assets";
 import "./globals.css";
 
 const lexend = Lexend({
@@ -17,6 +18,10 @@ export const metadata: Metadata = {
   },
   description:
     "Sube una imagen, comparte su ID y consulta el análisis de los anuncios que la usan.",
+  icons: {
+    icon: WITME_LENS_CDN.favicon,
+    apple: WITME_LENS_CDN.favicon,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
