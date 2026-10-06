@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DownloadIcon, TrashIcon } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { CopyButton } from "@/components/copy-button";
+import { HomeLink } from "@/components/home-link";
 import { AssetLocationEditor } from "@/components/asset-location-editor";
 import { CreativePreview } from "@/components/creative-preview";
 import { confirmDeleteAsset, useLibrary } from "@/components/library-provider";
@@ -59,9 +60,9 @@ export function AssetDetail({ asset }: { asset: DemoAsset }) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <p className="text-sm text-muted-foreground">
-        <Link href="/" className="hover:underline">
+        <HomeLink href="/" className="hover:underline">
           Biblioteca
-        </Link>{" "}
+        </HomeLink>{" "}
         / {asset.code}
       </p>
 

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
+import { HomeLink } from "@/components/home-link";
 import { AssetDetail } from "@/components/asset-detail";
 import { useLibrary } from "@/components/library-provider";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ export function AssetPageBody({ code }: { code: string }) {
             {code} no está en la biblioteca. Prueba con CREA-000142.
           </p>
           <Button asChild className="mt-6 h-11 rounded-[10px] px-5">
-            <Link href="/">Volver a la biblioteca</Link>
+            <HomeLink>Volver a la biblioteca</HomeLink>
           </Button>
         </div>
       </AppShell>
