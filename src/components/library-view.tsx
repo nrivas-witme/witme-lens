@@ -11,6 +11,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { AssetCard } from "@/components/asset-card";
+import { AssetLocationEditor } from "@/components/asset-location-editor";
 import {
   confirmDeleteFolder,
   folderPath,
@@ -199,10 +200,10 @@ export function LibraryView() {
           </h2>
           <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {recentAssets.map((asset) => (
-              <li key={asset.code}>
+              <li key={asset.code} className="rounded-[10px] p-1 hover:bg-brand-tint">
                 <Link
                   href={assetHref(asset.code)}
-                  className="block rounded-[10px] p-1 hover:bg-brand-tint"
+                  className="block"
                   aria-label={`Ver ficha de ${asset.code}`}
                 >
                   <span className="flex h-16 items-center justify-center overflow-hidden rounded-[8px] bg-[#f0f4f8] ring-1 ring-border">
@@ -216,6 +217,13 @@ export function LibraryView() {
                     {asset.code}
                   </span>
                 </Link>
+                <div className="mt-1 px-0.5">
+                  <AssetLocationEditor
+                    code={asset.code}
+                    compact
+                    idPrefix={`recent-${asset.code}`}
+                  />
+                </div>
               </li>
             ))}
           </ul>

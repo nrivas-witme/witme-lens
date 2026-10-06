@@ -32,6 +32,7 @@ import {
   saveDeletedCodes,
   saveNextNumber,
   savePlacements,
+  updateLocalAssetFolder,
   type LibraryFolder,
 } from "@/lib/local-library";
 import { formatCreativeCode } from "@/lib/naming";
@@ -69,6 +70,7 @@ type LibraryContextValue = {
   createFolder: (parentId: string | null, name: string) => Promise<LibraryFolder | null>;
   deleteFolder: (id: string) => Promise<void>;
   ensurePath: (names: string[]) => Promise<string>;
+  moveAssetToFolder: (code: string, folderId: string) => Promise<void>;
 };
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -340,6 +342,25 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     return folder;
   }, []);
 
+  const moveAssetToFolder = useCallback(async (code: string, folderId: string) => {
+    if (!foldersRef.current.some((folder) => folder.id === folderId)) {
+      throw new Error("La carpeta no existe");
+    }
+    setPlacements((current) => {
+      const next = { ...current, [code]: folderId };
+      void savePlacements(next);
+      return next;
+    });
+    setLocalAssets((current) => {
+      const exists = current.some((asset) => asset.code === code);
+      if (!exists) return current;
+      return current.map((asset) =>
+        asset.code === code ? { ...asset, folderId } : asset,
+      );
+    });
+    await updateLocalAssetFolder(code, folderId);
+  }, []);
+
   const deleteFolder = useCallback(
     async (id: string) => {
       const ids = descendantFolderIds(foldersRef.current, id);
@@ -385,6 +406,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       createFolder,
       deleteFolder,
       ensurePath,
+      moveAssetToFolder,
     }),
     [
       allocateCodes,
@@ -396,6 +418,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       folderIdOf,
       folders,
       getAsset,
+      moveAssetToFolder,
       ready,
       saveUpload,
     ],

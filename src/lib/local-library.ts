@@ -182,6 +182,23 @@ export async function putLocalRecord(record: LocalRecord): Promise<void> {
   await idbRequest(db.transaction("assets", "readwrite").objectStore("assets").put(record));
 }
 
+export async function updateLocalAssetFolder(
+  code: string,
+  folderId: string,
+): Promise<void> {
+  const db = await openDb();
+  const record = await idbRequest(
+    db.transaction("assets").objectStore("assets").get(code) as IDBRequest<
+      LocalRecord | undefined
+    >,
+  );
+  if (!record) return;
+  await putLocalRecord({
+    ...record,
+    asset: { ...record.asset, folderId, previewSrc: "" },
+  });
+}
+
 export async function deleteLocalRecord(code: string): Promise<void> {
   const db = await openDb();
   await idbRequest(db.transaction("assets", "readwrite").objectStore("assets").delete(code));

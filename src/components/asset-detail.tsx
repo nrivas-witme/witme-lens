@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DownloadIcon, TrashIcon } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { CopyButton } from "@/components/copy-button";
+import { AssetLocationEditor } from "@/components/asset-location-editor";
 import { CreativePreview } from "@/components/creative-preview";
 import { confirmDeleteAsset, useLibrary } from "@/components/library-provider";
 import { StatusBadge } from "@/components/status-badge";
@@ -119,6 +120,9 @@ export function AssetDetail({ asset }: { asset: DemoAsset }) {
           <p className="mt-3 break-all text-xs text-muted-foreground">
             Nombre normalizado: {asset.normalizedName}
           </p>
+          <div className="mt-4 border-t border-border pt-4">
+            <AssetLocationEditor code={asset.code} idPrefix={`ficha-${asset.code}`} />
+          </div>
         </section>
 
         <section>

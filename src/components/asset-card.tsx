@@ -7,6 +7,7 @@ import { confirmDeleteAsset, useLibrary } from "@/components/library-provider";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { AssetLocationEditor } from "@/components/asset-location-editor";
 import { CreativePreview } from "@/components/creative-preview";
 import { StatusBadge } from "@/components/status-badge";
 import { assetHref, type DemoAsset } from "@/lib/demo-data";
@@ -17,13 +18,21 @@ export function AssetCard({ asset }: { asset: DemoAsset }) {
 
   return (
     <Card className="rounded-[16px] py-0 shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-border">
-      <Link
-        href={assetHref(asset.code)}
-        aria-label={`Ver ficha de ${asset.code}: ${asset.title}`}
-        className="flex h-56 items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8]"
-      >
-        <CreativePreview asset={asset} className="h-full w-full" />
-      </Link>
+      <div className="relative">
+        <Link
+          href={assetHref(asset.code)}
+          aria-label={`Ver ficha de ${asset.code}: ${asset.title}`}
+          className="flex h-56 items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8]"
+        >
+          <CreativePreview asset={asset} className="h-full w-full" />
+        </Link>
+        <div
+          className="absolute inset-x-0 bottom-0 border-t border-border/60 bg-white/95 p-2 backdrop-blur-sm"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <AssetLocationEditor code={asset.code} compact idPrefix={`card-${asset.code}`} />
+        </div>
+      </div>
       <div className="flex flex-col gap-3 px-4 py-4">
         <div className="flex items-start justify-between gap-2">
           <Link
