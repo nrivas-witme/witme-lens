@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, type DragEvent } from "react";
+import { type DragEvent } from "react";
 import Link from "next/link";
 import { FolderIcon, GripVerticalIcon, TrashIcon } from "lucide-react";
 import { confirmDeleteFolder, useLibrary } from "@/components/library-provider";
 import { Button } from "@/components/ui/button";
+import { useDropHighlight } from "@/hooks/use-drop-highlight";
 import {
   canMoveFolderInto,
-  DND_ASSET_MIME,
-  DND_FOLDER_MIME,
+  dragCarriesAsset,
+  dragCarriesFolder,
   readDraggedAssetCode,
   readDraggedFolderId,
+  writeFolderDrag,
 } from "@/lib/library-dnd";
 
 function countLabel(count: number): string {
@@ -31,28 +33,26 @@ export function LibraryFolderCard({
   onNavigateAfterDelete?: () => void;
 }) {
   const { folders, deleteFolder, moveAssetToFolder, moveFolderToParent } = useLibrary();
-  const [dropActive, setDropActive] = useState(false);
+  const dropHighlight = useDropHighlight();
 
   function allowDrop(event: DragEvent) {
-    const assetCode = readDraggedAssetCode(event.dataTransfer);
-    const draggedFolderId = readDraggedFolderId(event.dataTransfer);
-    if (assetCode) {
+    if (dragCarriesAsset(event.dataTransfer)) {
       event.preventDefault();
+      event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
       return;
     }
-    if (
-      draggedFolderId &&
-      canMoveFolderInto(folders, draggedFolderId, folderId)
-    ) {
+    if (dragCarriesFolder(event.dataTransfer)) {
       event.preventDefault();
+      event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
     }
   }
 
   async function handleDrop(event: DragEvent) {
     event.preventDefault();
-    setDropActive(false);
+    event.stopPropagation();
+    dropHighlight.reset();
     const assetCode = readDraggedAssetCode(event.dataTransfer);
     if (assetCode) {
       await moveAssetToFolder(assetCode, folderId);
@@ -70,13 +70,11 @@ export function LibraryFolderCard({
   return (
     <div
       className={`relative rounded-[16px] bg-white shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-1 transition-shadow ${
-        dropActive ? "ring-2 ring-brand ring-offset-2" : "ring-border"
+        dropHighlight.active ? "ring-2 ring-brand ring-offset-2" : "ring-border"
       }`}
-      onDragOver={(event) => {
-        allowDrop(event);
-        setDropActive(true);
-      }}
-      onDragLeave={() => setDropActive(false)}
+      onDragEnter={dropHighlight.onDragEnter}
+      onDragOver={(event) => allowDrop(event)}
+      onDragLeave={dropHighlight.onDragLeave}
       onDrop={(event) => void handleDrop(event)}
     >
       <div className="flex items-start gap-1 p-4 pr-12">
@@ -85,10 +83,7 @@ export function LibraryFolderCard({
           draggable
           className="mt-0.5 shrink-0 cursor-grab rounded-[8px] p-1 text-muted-foreground hover:bg-muted active:cursor-grabbing"
           aria-label={`Arrastrar carpeta ${name}`}
-          onDragStart={(event) => {
-            event.dataTransfer.setData(DND_FOLDER_MIME, folderId);
-            event.dataTransfer.effectAllowed = "move";
-          }}
+          onDragStart={(event) => writeFolderDrag(event.dataTransfer, folderId)}
         >
           <GripVerticalIcon className="size-4" />
         </button>

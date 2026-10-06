@@ -1,8 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
-import { GripVerticalIcon, TrashIcon } from "lucide-react";
-import { DND_ASSET_MIME } from "@/lib/library-dnd";
+import { useRouter } from "next/navigation";
+import { TrashIcon } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { confirmDeleteAsset, useLibrary } from "@/components/library-provider";
 import { Card } from "@/components/ui/card";
@@ -13,33 +14,46 @@ import { CreativePreview } from "@/components/creative-preview";
 import { StatusBadge } from "@/components/status-badge";
 import { assetHref, type DemoAsset } from "@/lib/demo-data";
 import { formatDate } from "@/lib/format";
+import { writeAssetDrag } from "@/lib/library-dnd";
 
 export function AssetCard({ asset }: { asset: DemoAsset }) {
   const { deleteAsset } = useLibrary();
+  const router = useRouter();
+  const dragged = useRef(false);
 
   return (
     <Card className="rounded-[16px] py-0 shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-border">
       <div className="relative">
-        <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8]">
-          <button
-            type="button"
-            draggable
-            className="absolute top-2 left-2 z-10 cursor-grab rounded-[8px] bg-white/90 p-1.5 text-muted-foreground shadow-sm hover:bg-white active:cursor-grabbing"
-            aria-label={`Arrastrar ${asset.code} a otra carpeta`}
-            onDragStart={(event) => {
-              event.dataTransfer.setData(DND_ASSET_MIME, asset.code);
-              event.dataTransfer.effectAllowed = "move";
-            }}
-          >
-            <GripVerticalIcon className="size-4" />
-          </button>
-          <Link
-            href={assetHref(asset.code)}
-            aria-label={`Ver ficha de ${asset.code}: ${asset.title}`}
-            className="flex h-full w-full items-center justify-center"
-          >
-            <CreativePreview asset={asset} className="h-full w-full" />
-          </Link>
+        <div
+          draggable
+          role="button"
+          tabIndex={0}
+          aria-label={`${asset.code}: arrastra a una carpeta o pulsa para abrir la ficha`}
+          className="relative flex h-56 cursor-grab items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8] active:cursor-grabbing"
+          onDragStart={(event) => {
+            dragged.current = true;
+            writeAssetDrag(event.dataTransfer, asset.code);
+          }}
+          onDragEnd={() => {
+            window.setTimeout(() => {
+              dragged.current = false;
+            }, 0);
+          }}
+          onClick={() => {
+            if (dragged.current) return;
+            router.push(assetHref(asset.code));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              router.push(assetHref(asset.code));
+            }
+          }}
+        >
+          <CreativePreview asset={asset} className="h-full w-full pointer-events-none" />
+          <span className="pointer-events-none absolute bottom-10 left-2 rounded-[8px] bg-white/90 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+            Arrastra a una carpeta
+          </span>
         </div>
         <div
           className="absolute inset-x-0 bottom-0 border-t border-border/60 bg-white/95 p-2 backdrop-blur-sm"

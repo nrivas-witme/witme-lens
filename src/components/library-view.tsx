@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRightIcon,
   FolderPlusIcon,
-  GripVerticalIcon,
   SearchIcon,
 } from "lucide-react";
 import { AssetCard } from "@/components/asset-card";
@@ -21,9 +20,11 @@ import { assetHref, catalogs } from "@/lib/demo-data";
 import { FOLDER_COUNTRY_CODES, compareFolderNames } from "@/lib/folders";
 import {
   canMoveFolderInto,
-  DND_ASSET_MIME,
+  dragCarriesAsset,
+  dragCarriesFolder,
   readDraggedAssetCode,
   readDraggedFolderId,
+  writeAssetDrag,
 } from "@/lib/library-dnd";
 
 function folderHref(id: string | null): string {
@@ -48,17 +49,14 @@ function BreadcrumbDropTarget({
   const [hover, setHover] = useState(false);
 
   function allowDrop(event: DragEvent) {
-    const assetCode = readDraggedAssetCode(event.dataTransfer);
-    if (assetCode && folderId) {
+    if (dragCarriesAsset(event.dataTransfer) && folderId) {
       event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
       return;
     }
-    const draggedFolderId = readDraggedFolderId(event.dataTransfer);
-    if (
-      draggedFolderId &&
-      canMoveFolderInto(folders, draggedFolderId, folderId)
-    ) {
+    if (dragCarriesFolder(event.dataTransfer)) {
       event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
     }
   }
 
@@ -251,8 +249,8 @@ export function LibraryView() {
       </nav>
       {!searching ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Arrastra creatividades o carpetas (icono ≡) sobre otra carpeta o la ruta
-          de arriba para moverlas.
+          Arrastra la miniatura de una creatividad o el icono ≡ de una carpeta sobre
+          otra carpeta (se resalta al soltar).
         </p>
       ) : null}
 
@@ -284,29 +282,22 @@ export function LibraryView() {
           <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {recentAssets.map((asset) => (
               <li key={asset.code} className="rounded-[10px] p-1 hover:bg-brand-tint">
-                <div className="relative">
-                  <button
-                    type="button"
-                    draggable
-                    className="absolute top-1 left-1 z-10 cursor-grab rounded-[6px] bg-white/90 p-1 text-muted-foreground shadow-sm active:cursor-grabbing"
-                    aria-label={`Arrastrar ${asset.code}`}
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData(DND_ASSET_MIME, asset.code);
-                      event.dataTransfer.effectAllowed = "move";
-                    }}
-                  >
-                    <GripVerticalIcon className="size-3.5" />
-                  </button>
+                <div
+                  draggable
+                  className="cursor-grab active:cursor-grabbing"
+                  onDragStart={(event) => writeAssetDrag(event.dataTransfer, asset.code)}
+                >
                   <Link
                     href={assetHref(asset.code)}
                     className="block"
                     aria-label={`Ver ficha de ${asset.code}`}
+                    draggable={false}
                   >
                     <span className="flex h-16 items-center justify-center overflow-hidden rounded-[8px] bg-[#f0f4f8] ring-1 ring-border">
                       <CreativePreview
                         asset={asset}
                         compact
-                        className="h-full w-full"
+                        className="pointer-events-none h-full w-full"
                       />
                     </span>
                     <span className="mt-1 block truncate text-center font-mono text-[11px] text-brand">
