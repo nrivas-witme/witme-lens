@@ -1,4 +1,5 @@
 import {
+  catalogs,
   demoAssets,
   getBrand,
   getCountry,
@@ -213,6 +214,7 @@ export function buildAssetFromUpload(input: {
   height: number;
   folderId: string;
   theme: string;
+  themeFolderName?: string;
 }): DemoAsset {
   const brand = getBrand(input.brand);
   const country = getCountry(input.country);
@@ -220,7 +222,13 @@ export function buildAssetFromUpload(input: {
   const language = getLanguage(input.language);
   const format = getFormat(input.format);
   const size = getSize(input.sizeCode);
-  const theme = getTheme(input.theme);
+  const themeName =
+    input.themeFolderName?.trim() || getTheme(input.theme).name;
+  const themeCode =
+    catalogs.themes.some((item) => item.code === input.theme) &&
+    input.theme !== "CUSTOM"
+      ? input.theme
+      : "GENERICA";
   const title = input.file.name.replace(/\.[^.]+$/, "") || input.code;
 
   return {
@@ -258,8 +266,8 @@ export function buildAssetFromUpload(input: {
     author: "Subida local (este navegador)",
     previewSrc: "",
     folderId: input.folderId,
-    theme: theme.code,
-    themeName: theme.name,
+    theme: themeCode,
+    themeName,
     status: "no_ads",
     analysis: null,
     usages: [],

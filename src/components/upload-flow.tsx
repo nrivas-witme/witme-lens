@@ -3,10 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircleIcon, HomeIcon, UploadIcon, XIcon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  FolderOpenIcon,
+  HomeIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -21,6 +28,14 @@ import {
 import { catalogs } from "@/lib/demo-data";
 import { folderPath, useLibrary } from "@/components/library-provider";
 import { buildNormalizedName, fileExtension } from "@/lib/naming";
+import {
+  UPLOAD_THEME_CUSTOM,
+  currentUploadCalendar,
+  guessUploadFromFilename,
+  languageForCountry,
+  uploadMonthOptions,
+  uploadYearOptions,
+} from "@/lib/upload-meta";
 import {
   formatSizeLabel,
   getSize,
@@ -46,10 +61,20 @@ type UploadItem = {
   format: string;
   language: string;
   theme: string;
+  themeCustom: string;
+  folderYear: string;
+  folderMonth: string;
   code: string;
   status: FileStatus;
   progress: number;
+  folderId?: string;
 };
+
+function folderBrowseHref(folderId: string): string {
+  return `/?carpeta=${encodeURIComponent(folderId)}`;
+}
+
+const calendar = currentUploadCalendar();
 
 const defaultMeta = {
   brand: "CREDITIO",
@@ -58,8 +83,13 @@ const defaultMeta = {
   format: "IMAGEN",
   language: "DE",
   theme: "GENERICA",
+  themeCustom: "",
+  folderYear: calendar.folderYear,
+  folderMonth: calendar.folderMonth,
   sizeCode: "1200x1200",
 };
+
+const HIDDEN_PRODUCT = "TARJETA";
 
 const ACCEPTED_LABEL = "PNG, JPG, WEBP, MP4 o WEBM";
 const ACCEPTED_TYPES = "image/png,image/jpeg,image/webp,video/mp4,video/webm";
@@ -138,6 +168,7 @@ function CatalogSelect({
   onChange,
   options,
   disabled,
+  labelKey = "name",
 }: {
   id: string;
   label: string;
@@ -145,6 +176,7 @@ function CatalogSelect({
   onChange: (value: string) => void;
   options: readonly { code: string; name: string }[];
   disabled?: boolean;
+  labelKey?: "name" | "code";
 }) {
   return (
     <div className="grid gap-1.5">
@@ -156,12 +188,68 @@ function CatalogSelect({
         <SelectContent>
           {options.map((item) => (
             <SelectItem key={item.code} value={item.code}>
-              {item.name}
+              {labelKey === "code" ? item.code : item.name}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+function ThemeFields({
+  idPrefix,
+  theme,
+  themeCustom,
+  disabled,
+  onTheme,
+  onThemeCustom,
+}: {
+  idPrefix: string;
+  theme: string;
+  themeCustom: string;
+  disabled?: boolean;
+  onTheme: (value: string) => void;
+  onThemeCustom: (value: string) => void;
+}) {
+  return (
+    <>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`${idPrefix}-tematica`}>Temática</Label>
+        <Select value={theme} onValueChange={onTheme} disabled={disabled}>
+          <SelectTrigger
+            id={`${idPrefix}-tematica`}
+            className="h-10 w-full rounded-[10px] bg-white"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {catalogs.themes.map((item) => (
+              <SelectItem key={item.code} value={item.code}>
+                {item.name}
+              </SelectItem>
+            ))}
+            <SelectItem value={UPLOAD_THEME_CUSTOM}>Nueva temática…</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {theme === UPLOAD_THEME_CUSTOM ? (
+        <div className="grid gap-1.5 sm:col-span-2">
+          <Label htmlFor={`${idPrefix}-tematica-nueva`}>Nombre de la carpeta</Label>
+          <Input
+            id={`${idPrefix}-tematica-nueva`}
+            value={themeCustom}
+            disabled={disabled}
+            onChange={(event) => onThemeCustom(event.target.value)}
+            placeholder="Halloween, Comercios, Black Friday…"
+            className="h-10 rounded-[10px] bg-white"
+          />
+          <p className="text-xs text-muted-foreground">
+            Se creará como subcarpeta de temática si no existe.
+          </p>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -271,7 +359,7 @@ export function UploadFlow() {
   const anyDone = items.some((item) => item.status === "done");
 
   useEffect(() => {
-    if (requestedFolder && !ready) return;
+    if (!ready) return;
     for (const item of items) {
       if (item.status !== "done" || savedIds.current.has(item.localId)) continue;
       savedIds.current.add(item.localId);
@@ -280,17 +368,36 @@ export function UploadFlow() {
         code: item.code,
         brand: item.brand,
         country: item.country,
-        product: item.product,
+        product: HIDDEN_PRODUCT,
         format: item.format,
         language: item.language,
         sizeCode: item.sizeCode,
         width: item.width,
         height: item.height,
         theme: item.theme,
+        themeCustom: item.themeCustom,
+        folderYear: item.folderYear,
+        folderMonth: item.folderMonth,
         folderId: currentFolder?.id,
-      });
+      })
+        .then((folderId) => {
+          setItems((current) =>
+            current.map((row) =>
+              row.localId === item.localId ? { ...row, folderId } : row,
+            ),
+          );
+        })
+        .catch((error) => {
+          console.error("No se pudo guardar la subida", error);
+          savedIds.current.delete(item.localId);
+          setItems((current) =>
+            current.map((row) =>
+              row.localId === item.localId ? { ...row, status: "error" } : row,
+            ),
+          );
+        });
     }
-  }, [currentFolder?.id, items, ready, requestedFolder, saveUpload]);
+  }, [currentFolder?.id, items, ready, saveUpload]);
 
   async function addFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList);
@@ -330,21 +437,29 @@ export function UploadFlow() {
     }
 
     const codes = accepted.length > 0 ? allocateCodes(accepted.length) : [];
-    const next: UploadItem[] = accepted.map((entry, index) => ({
-      localId: crypto.randomUUID(),
-      file: entry.file,
-      previewUrl: URL.createObjectURL(entry.file),
-      fileWidth: entry.pixels.width,
-      fileHeight: entry.pixels.height,
-      ...batch,
-      format: detectFormat(entry.file),
-      sizeCode: entry.matched.code,
-      width: entry.matched.width,
-      height: entry.matched.height,
-      code: codes[index],
-      status: "ready",
-      progress: 0,
-    }));
+    const next: UploadItem[] = accepted.map((entry, index) => {
+      const guessed = guessUploadFromFilename(entry.file.name);
+      const country = guessed.country ?? batch.country;
+      return {
+        localId: crypto.randomUUID(),
+        file: entry.file,
+        previewUrl: URL.createObjectURL(entry.file),
+        fileWidth: entry.pixels.width,
+        fileHeight: entry.pixels.height,
+        ...batch,
+        brand: guessed.brand ?? batch.brand,
+        country,
+        language: guessed.language ?? languageForCountry(country),
+        product: HIDDEN_PRODUCT,
+        format: detectFormat(entry.file),
+        sizeCode: entry.matched.code,
+        width: entry.matched.width,
+        height: entry.matched.height,
+        code: codes[index],
+        status: "ready",
+        progress: 0,
+      };
+    });
 
     setRejectNotice(rejectNoticeFor({ format: rejectedFormat, size: rejectedSize }));
     if (next.length > 0) {
@@ -431,7 +546,7 @@ export function UploadFlow() {
           code: item.code,
           brand: item.brand,
           country: item.country,
-          product: item.product,
+          product: HIDDEN_PRODUCT,
           format: item.format,
           width: item.width,
           height: item.height,
@@ -562,8 +677,9 @@ export function UploadFlow() {
           <section className="mt-8 rounded-[16px] bg-white p-5 shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-1 ring-border">
             <h2 className="text-lg text-brand">Metadatos del lote</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Se aplican a todos los archivos pendientes. Puedes corregir cada
-              uno abajo. El ID y el nombre los genera el sistema.
+              Se aplican a todos los archivos pendientes. Marca y país se
+              detectan del nombre del archivo cuando pueden. El ID y el nombre
+              los genera el sistema.
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <CatalogSelect
@@ -577,8 +693,13 @@ export function UploadFlow() {
                 id="lote-pais"
                 label="País"
                 value={batch.country}
+                labelKey="code"
                 onChange={(country) =>
-                  setBatch((current) => ({ ...current, country }))
+                  setBatch((current) => ({
+                    ...current,
+                    country,
+                    language: languageForCountry(country),
+                  }))
                 }
                 options={catalogs.countries}
               />
@@ -590,15 +711,6 @@ export function UploadFlow() {
                 options={catalogs.formats}
               />
               <CatalogSelect
-                id="lote-producto"
-                label="Producto"
-                value={batch.product}
-                onChange={(product) =>
-                  setBatch((current) => ({ ...current, product }))
-                }
-                options={catalogs.products}
-              />
-              <CatalogSelect
                 id="lote-idioma"
                 label="Idioma"
                 value={batch.language}
@@ -608,11 +720,37 @@ export function UploadFlow() {
                 options={catalogs.languages}
               />
               <CatalogSelect
-                id="lote-tematica"
-                label="Temática"
-                value={batch.theme}
-                onChange={(theme) => setBatch((current) => ({ ...current, theme }))}
-                options={catalogs.themes}
+                id="lote-anio"
+                label="Año"
+                value={batch.folderYear}
+                onChange={(folderYear) =>
+                  setBatch((current) => ({ ...current, folderYear }))
+                }
+                options={uploadYearOptions().map((year) => ({
+                  code: year,
+                  name: year,
+                }))}
+              />
+              <CatalogSelect
+                id="lote-mes"
+                label="Mes"
+                value={batch.folderMonth}
+                onChange={(folderMonth) =>
+                  setBatch((current) => ({ ...current, folderMonth }))
+                }
+                options={uploadMonthOptions.map((month) => ({
+                  code: month,
+                  name: month,
+                }))}
+              />
+              <ThemeFields
+                idPrefix="lote"
+                theme={batch.theme}
+                themeCustom={batch.themeCustom}
+                onTheme={(theme) => setBatch((current) => ({ ...current, theme }))}
+                onThemeCustom={(themeCustom) =>
+                  setBatch((current) => ({ ...current, themeCustom }))
+                }
               />
               <SizeSelect
                 id="lote-tamano"
@@ -635,11 +773,20 @@ export function UploadFlow() {
               <li key={item.localId}>
                 <Card className="rounded-[16px] ring-border">
                   <CardContent className="grid gap-4 sm:grid-cols-[120px_1fr]">
-                    <img
-                      src={item.previewUrl}
-                      alt=""
-                      className="h-24 w-full rounded-[10px] object-contain bg-brand-tint"
-                    />
+                    {item.format === "VIDEO" ? (
+                      <video
+                        src={item.previewUrl}
+                        className="h-24 w-full rounded-[10px] object-contain bg-brand-tint"
+                        muted
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={item.previewUrl}
+                        alt=""
+                        className="h-24 w-full rounded-[10px] object-contain bg-brand-tint"
+                      />
+                    )}
                     <div className="grid gap-3">
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -694,33 +841,22 @@ export function UploadFlow() {
                           id={`${item.localId}-pais`}
                           label="País"
                           value={item.country}
+                          labelKey="code"
                           disabled={item.status === "done" || item.status === "uploading"}
                           onChange={(country) =>
                             setItems((current) =>
                               current.map((row) =>
                                 row.localId === item.localId
-                                  ? { ...row, country }
+                                  ? {
+                                      ...row,
+                                      country,
+                                      language: languageForCountry(country),
+                                    }
                                   : row,
                               ),
                             )
                           }
                           options={catalogs.countries}
-                        />
-                        <CatalogSelect
-                          id={`${item.localId}-producto`}
-                          label="Producto"
-                          value={item.product}
-                          disabled={item.status === "done" || item.status === "uploading"}
-                          onChange={(product) =>
-                            setItems((current) =>
-                              current.map((row) =>
-                                row.localId === item.localId
-                                  ? { ...row, product }
-                                  : row,
-                              ),
-                            )
-                          }
-                          options={catalogs.products}
                         />
                         <CatalogSelect
                           id={`${item.localId}-idioma`}
@@ -739,18 +875,64 @@ export function UploadFlow() {
                           options={catalogs.languages}
                         />
                         <CatalogSelect
-                          id={`${item.localId}-tematica`}
-                          label="Temática"
-                          value={item.theme}
+                          id={`${item.localId}-anio`}
+                          label="Año"
+                          value={item.folderYear}
                           disabled={item.status === "done" || item.status === "uploading"}
-                          onChange={(theme) =>
+                          onChange={(folderYear) =>
+                            setItems((current) =>
+                              current.map((row) =>
+                                row.localId === item.localId
+                                  ? { ...row, folderYear }
+                                  : row,
+                              ),
+                            )
+                          }
+                          options={uploadYearOptions().map((year) => ({
+                            code: year,
+                            name: year,
+                          }))}
+                        />
+                        <CatalogSelect
+                          id={`${item.localId}-mes`}
+                          label="Mes"
+                          value={item.folderMonth}
+                          disabled={item.status === "done" || item.status === "uploading"}
+                          onChange={(folderMonth) =>
+                            setItems((current) =>
+                              current.map((row) =>
+                                row.localId === item.localId
+                                  ? { ...row, folderMonth }
+                                  : row,
+                              ),
+                            )
+                          }
+                          options={uploadMonthOptions.map((month) => ({
+                            code: month,
+                            name: month,
+                          }))}
+                        />
+                        <ThemeFields
+                          idPrefix={item.localId}
+                          theme={item.theme}
+                          themeCustom={item.themeCustom}
+                          disabled={item.status === "done" || item.status === "uploading"}
+                          onTheme={(theme) =>
                             setItems((current) =>
                               current.map((row) =>
                                 row.localId === item.localId ? { ...row, theme } : row,
                               ),
                             )
                           }
-                          options={catalogs.themes}
+                          onThemeCustom={(themeCustom) =>
+                            setItems((current) =>
+                              current.map((row) =>
+                                row.localId === item.localId
+                                  ? { ...row, themeCustom }
+                                  : row,
+                              ),
+                            )
+                          }
                         />
                         <SizeSelect
                           id={`${item.localId}-tamano`}
@@ -791,6 +973,22 @@ export function UploadFlow() {
                               value={`/creatividades/${item.code}`}
                               label="Copiar enlace"
                             />
+                            {(() => {
+                              const folderId =
+                                item.folderId ?? currentFolder?.id;
+                              return folderId ? (
+                                <Button
+                                  asChild
+                                  variant="outline"
+                                  className="h-10 rounded-[10px] px-3.5 text-[14px]"
+                                >
+                                  <Link href={folderBrowseHref(folderId)}>
+                                    <FolderOpenIcon data-icon="inline-start" />
+                                    Ver en carpeta
+                                  </Link>
+                                </Button>
+                              ) : null;
+                            })()}
                           </>
                         ) : item.status === "uploading" ? (
                           <Button
@@ -847,14 +1045,29 @@ export function UploadFlow() {
             <div className="mt-6 flex flex-col items-start gap-4">
               <p className="rounded-[10px] bg-brand-tint px-4 py-3 text-sm text-brand">
                 Guardada en la biblioteca de este navegador. Copia el ID o el
-                enlace y vuelve al inicio cuando quieras.
+                enlace, abre la carpeta o vuelve al inicio cuando quieras.
               </p>
-              <Button asChild className="h-11 rounded-[10px] px-5 text-[15px]">
-                <Link href={backHref}>
-                  <HomeIcon data-icon="inline-start" />
-                  Volver a inicio
-                </Link>
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                {(() => {
+                  const folderId =
+                    activeItems.find((item) => item.folderId)?.folderId ??
+                    currentFolder?.id;
+                  return folderId ? (
+                    <Button asChild className="h-11 rounded-[10px] px-5 text-[15px]">
+                      <Link href={folderBrowseHref(folderId)}>
+                        <FolderOpenIcon data-icon="inline-start" />
+                        Ver en carpeta
+                      </Link>
+                    </Button>
+                  ) : null;
+                })()}
+                <Button asChild variant="outline" className="h-11 rounded-[10px] px-5 text-[15px]">
+                  <Link href={backHref}>
+                    <HomeIcon data-icon="inline-start" />
+                    Volver a inicio
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
         </>

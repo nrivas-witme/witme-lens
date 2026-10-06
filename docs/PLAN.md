@@ -15,8 +15,8 @@ Cuatro pantallas navegables, **datos demo etiquetados** (nunca como métricas re
 | Ruta | Pantalla |
 | --- | --- |
 | `/acceso` | Logo/texto, «Entrar con Google» (sin OAuth real), mensaje de cuenta sin acceso |
-| `/` | Biblioteca: búsqueda, filtros marca/país, cuadrícula, CTA «Subir imagen» |
-| `/subir` | Dropzone, metadatos en lote, preview de ID/nombre, confirmación copiar ID/enlace |
+| `/` | Biblioteca: carpetas Marca→Año→Mes→País→Temática, buscador global, «Últimas añadidas», CTA «Subir imagen» |
+| `/subir` | Dropzone, metadatos (incl. temática), carpeta destino, preview ID/nombre, guardado local (Fase 0), copiar ID/enlace |
 | `/creatividades/CREA-000142` | Ficha: preview contain, análisis, dónde se usa, calidad del dato |
 
 Escenario demo del SPEC: Meta 100 € + Google 50 €; tracking 240 € confirmados + 40 € pendientes; ROAS 1,60. Etiqueta visible de demostración.
@@ -58,7 +58,7 @@ Escenario demo del SPEC: Meta 100 € + Google 50 €; tracking 240 € confirma
 | Supabase | Sin proyecto |
 | Meta Ads / Google Ads | Sin credenciales |
 | Tracking Witme (ingresos) | Fuente no definida |
-| Logo oficial | No aportado; se usa texto «Witme Lens» |
+| Logo oficial | Wordmark y favicon Witme Lens en el prototipo |
 
 ## Fuera del MVP (no se construye)
 

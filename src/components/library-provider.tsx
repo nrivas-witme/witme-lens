@@ -18,6 +18,7 @@ import {
 } from "@/lib/demo-data";
 import { migrateCountryFolderNames, seedBrandCalendarFolders } from "@/lib/folders";
 import { folderMonth, folderYear } from "@/lib/format";
+import { resolveThemeFolderName } from "@/lib/upload-meta";
 import {
   buildAssetFromUpload,
   deleteFolderRecord,
@@ -50,6 +51,9 @@ type UploadSnapshot = {
   width: number;
   height: number;
   theme: string;
+  themeCustom: string;
+  folderYear: string;
+  folderMonth: string;
   folderId?: string;
 };
 
@@ -60,7 +64,7 @@ type LibraryContextValue = {
   getAsset: (code: string) => DemoAsset | undefined;
   folderIdOf: (code: string) => string | null;
   allocateCodes: (count: number) => string[];
-  saveUpload: (snapshot: UploadSnapshot) => Promise<void>;
+  saveUpload: (snapshot: UploadSnapshot) => Promise<string>;
   deleteAsset: (code: string) => Promise<void>;
   createFolder: (parentId: string | null, name: string) => Promise<LibraryFolder | null>;
   deleteFolder: (id: string) => Promise<void>;
@@ -261,18 +265,26 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 
   const saveUpload = useCallback(
     async (snapshot: UploadSnapshot) => {
+      const themeFolderName = resolveThemeFolderName(
+        snapshot.theme,
+        snapshot.themeCustom,
+      );
       const folderId =
         snapshot.folderId &&
         foldersRef.current.some((folder) => folder.id === snapshot.folderId)
           ? snapshot.folderId
           : await ensurePath([
               getBrand(snapshot.brand)?.name ?? snapshot.brand,
-              folderYear(new Date().toISOString()),
-              folderMonth(new Date().toISOString()),
+              snapshot.folderYear,
+              snapshot.folderMonth,
               getCountry(snapshot.country).code,
-              getTheme(snapshot.theme).name,
+              themeFolderName,
             ]);
-      const asset = buildAssetFromUpload({ ...snapshot, folderId });
+      const asset = buildAssetFromUpload({
+        ...snapshot,
+        folderId,
+        themeFolderName,
+      });
       const previewSrc = URL.createObjectURL(snapshot.file);
       previewUrls.current.push(previewSrc);
       const stored = { ...asset, previewSrc, folderId };
@@ -290,6 +302,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         stored,
         ...current.filter((item) => item.code !== stored.code),
       ]);
+      return folderId;
     },
     [ensurePath],
   );

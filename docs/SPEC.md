@@ -1,6 +1,6 @@
 # Witme Lens — Especificación para desarrollar en Cursor
 
-Versión: 2.2 (simplificada, login con Google) · Repositorio: `witme-lens` · Fecha: 5 de octubre de 2026 · Idioma de la interfaz: español.
+Versión: 2.3 (biblioteca por carpetas) · Repositorio: `witme-lens` · Fecha: 6 de octubre de 2026 · Idioma de la interfaz: español.
 
 ## 1. Instrucción principal para Cursor
 
@@ -39,18 +39,25 @@ Antes de ellas, una **pantalla de acceso** mínima: logo o texto «Witme Lens»,
 
 ### A. Subir imagen
 
-1. Arrastrar o seleccionar una o varias imágenes.
-2. Elegir marca, país, producto, idioma y tamaño (aplicables en lote, corregibles por archivo). El tamaño sale del catálogo Display / PMax.
+1. Arrastrar o seleccionar una o varias imágenes o vídeos (formatos y tamaños del catálogo).
+2. Elegir marca, país, producto, idioma, **temática** y tamaño (aplicables en lote, corregibles por archivo). El tamaño sale del catálogo Display / PMax.
 3. Mostrar el ID y el nombre que se generarán, sin pedir que el usuario los escriba.
 4. Progreso de subida, reintento y cancelación.
-5. Confirmación «Lista para compartir» con botones **Copiar ID** y **Copiar enlace**.
+5. Confirmación «Lista para compartir» con botones **Copiar ID** y **Copiar enlace**, y volver a la biblioteca.
+6. **Ubicación:** si se abrió la subida desde una carpeta (`?carpeta=`), la creatividad se guarda ahí; si no, el sistema crea la ruta **marca → año → mes → país (código ISO) → temática**.
 
 ### B. Biblioteca (pantalla inicial)
 
-- Título «Biblioteca» y botón principal «Subir imagen».
-- Buscador: «Busca por ID o nombre».
-- Filtros básicos: marca y país.
-- Cuadrícula de tarjetas: miniatura, ID copiable, marca/país, tamaño (Display o PMax) y fecha.
+Explorador tipo Drive (como la organización en Google Drive), no una cuadrícula plana con filtros.
+
+- Título «Biblioteca», botón principal **Subir imagen** y acción secundaria **Nueva carpeta**.
+- **Ruta de carpetas** (breadcrumb) y navegación por niveles.
+- **Jerarquía por defecto:** `Marca` → `Año` (p. ej. 2026) → `Mes` → `País` (códigos **ES, CO, MX, DE, PL, RO, IT, PT**, no el nombre completo) → `Temática`.
+- **Temáticas** de catálogo: Genérica, Vídeos, Halloween, Comercios; también carpetas con nombre libre creadas por el usuario.
+- En la **raíz:** carpetas de marca (precreadas en el prototipo con año 2026 y los doce meses) y bloque compacto **Últimas añadidas** (miniatura + ID).
+- **Dentro de una carpeta:** subcarpetas y, en el último nivel útil, tarjetas de creatividad (miniatura, ID copiable, marca/país, tamaño Display o PMax, fecha, estado).
+- **Buscador** «Busca por ID o nombre»: al escribir, resultados en **todas** las carpetas (sin depender de la ruta actual).
+- En **Fase 0** la biblioteca y las subidas pueden persistir solo en el navegador (IndexedDB), claramente etiquetado; en **Fase 1** pasa a servidor y workspace compartido.
 
 ### C. Ficha de la imagen
 
@@ -229,7 +236,7 @@ Unicidad del evento por `(workspace, source, external_event_id)` y del dato diar
 | Ruta | Propósito |
 | --- | --- |
 | `POST /api/v1/uploads/init` · `POST /api/v1/uploads/:id/complete` | Subida directa a storage y confirmación |
-| `GET /api/v1/assets` | Biblioteca: búsqueda y filtros |
+| `GET /api/v1/assets` | Biblioteca: búsqueda, carpeta actual y listado jerárquico |
 | `GET /api/v1/assets/:code` | Ficha de la imagen |
 | `GET /api/v1/assets/:code/download` | Descarga temporal con nombre normalizado |
 | `GET /api/v1/assets/:code/metrics` | Análisis por ID con periodo, moneda y cobertura |
@@ -241,7 +248,7 @@ Unicidad del evento por `(workspace, source, external_event_id)` y del dato diar
 
 ### Fase 0 — Diseño de interfaz
 
-Sistema visual, la pantalla de acceso con Google y las tres pantallas (Subir, Biblioteca, Ficha) navegables con datos demo etiquetados. Revisión con tráfico antes de seguir.
+Sistema visual, la pantalla de acceso con Google y las pantallas (Acceso, Subir, Biblioteca por carpetas, Ficha) navegables con datos demo etiquetados. Revisión con tráfico antes de seguir.
 
 **Aceptación:** el flujo completo se puede recorrer en el prototipo y tráfico confirma que la ficha le da lo que necesita.
 
