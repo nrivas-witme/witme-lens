@@ -6,6 +6,16 @@ Fase actual: **0 — diseño de interfaz**. Prototipo navegable con datos de dem
 
 Especificación: [`docs/SPEC.md`](docs/SPEC.md). Plan: [`docs/PLAN.md`](docs/PLAN.md).
 
+## Demo en vivo (para compartir)
+
+El código en GitHub **no se ve** como aplicación web. **Releases** y **Packages** sirven para descargar artefactos o librerías, no para abrir la interfaz en el navegador.
+
+La demo publicada (GitHub Pages) está aquí:
+
+**https://nrivas-witme.github.io/witme-lens/**
+
+Tras cada push a `main`, GitHub Actions vuelve a desplegarla. Si la URL devuelve 404 la primera vez, en el repo ve a **Settings → Pages → Build and deployment → Source: GitHub Actions** y espera unos minutos al workflow «Deploy demo (GitHub Pages)».
+
 ## Arranque en local
 
 Requisitos: Node.js 20 o superior, npm.

@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { AccessView } from "@/components/access-view";
+import { Suspense } from "react";
+import { AccesoPageClient } from "@/app/acceso/acceso-page-client";
 
 export const metadata: Metadata = {
   title: "Acceso",
 };
 
-export default async function AccesoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ estado?: string | string[] }>;
-}) {
-  const params = await searchParams;
-  const estado = typeof params.estado === "string" ? params.estado : undefined;
+function AccesoFallback() {
+  return (
+    <div className="flex min-h-full items-center justify-center px-4 py-16 text-sm text-muted-foreground">
+      Cargando acceso…
+    </div>
+  );
+}
 
-  return <AccessView denied={estado === "sin-acceso"} />;
+export default function AccesoPage() {
+  return (
+    <Suspense fallback={<AccesoFallback />}>
+      <AccesoPageClient />
+    </Suspense>
+  );
 }

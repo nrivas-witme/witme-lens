@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { AssetPageBody } from "@/components/asset-page-body";
+import { demoAssets } from "@/lib/demo-data";
+
+export function generateStaticParams() {
+  return demoAssets.map((asset) => ({ code: asset.code }));
+}
 
 export async function generateMetadata({
   params,
