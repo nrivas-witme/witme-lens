@@ -3,6 +3,7 @@
 import { type DragEvent } from "react";
 import Link from "next/link";
 import { FolderIcon, GripVerticalIcon, TrashIcon } from "lucide-react";
+import { FolderRenameControl } from "@/components/folder-rename-control";
 import { confirmDeleteFolder, useLibrary } from "@/components/library-provider";
 import { Button } from "@/components/ui/button";
 import { useDropHighlight } from "@/hooks/use-drop-highlight";
@@ -77,7 +78,7 @@ export function LibraryFolderCard({
       onDragLeave={dropHighlight.onDragLeave}
       onDrop={(event) => void handleDrop(event)}
     >
-      <div className="flex items-start gap-1 p-4 pr-12">
+      <div className="flex items-start gap-1 p-4 pr-20">
         <button
           type="button"
           draggable
@@ -87,15 +88,21 @@ export function LibraryFolderCard({
         >
           <GripVerticalIcon className="size-4" />
         </button>
-        <Link href={folderHref} className="flex min-w-0 flex-1 items-start gap-3">
-          <FolderIcon className="mt-0.5 size-8 shrink-0 text-brand" />
-          <span>
-            <span className="block font-medium text-brand">{name}</span>
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Link
+            href={folderHref}
+            className="mt-0.5 shrink-0 rounded-[8px] focus-visible:outline-2"
+            aria-label={`Abrir carpeta ${name}`}
+          >
+            <FolderIcon className="size-8 text-brand" />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <FolderRenameControl folderId={folderId} name={name} variant="card" />
             <span className="mt-1 block text-sm text-muted-foreground">
               {countLabel(total)}
             </span>
-          </span>
-        </Link>
+          </div>
+        </div>
       </div>
       <Button
         type="button"

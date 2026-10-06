@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { AssetCard } from "@/components/asset-card";
 import { AssetLocationEditor } from "@/components/asset-location-editor";
+import { FolderRenameControl } from "@/components/folder-rename-control";
 import { LibraryFolderCard } from "@/components/library-folder-card";
 import { folderPath, useLibrary, type LibraryFolder } from "@/components/library-provider";
 import { CreativePreview } from "@/components/creative-preview";
@@ -202,7 +203,14 @@ export function LibraryView() {
               : "Cargando biblioteca…"}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {currentFolder && !searching ? (
+            <FolderRenameControl
+              folderId={currentFolder.id}
+              name={currentFolder.name}
+              variant="inline"
+            />
+          ) : null}
           <Button
             type="button"
             variant="outline"

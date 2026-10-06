@@ -70,6 +70,12 @@ type LibraryContextValue = {
   deleteAsset: (code: string) => Promise<void>;
   createFolder: (parentId: string | null, name: string) => Promise<LibraryFolder | null>;
   deleteFolder: (id: string) => Promise<void>;
+  renameFolder: (
+    folderId: string,
+    name: string,
+  ) => Promise<
+    { ok: true } | { ok: false; reason: "empty" | "duplicate" | "missing" }
+  >;
   ensurePath: (names: string[]) => Promise<string>;
   moveAssetToFolder: (code: string, folderId: string) => Promise<void>;
   moveFolderToParent: (folderId: string, newParentId: string | null) => Promise<void>;
@@ -363,6 +369,27 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     await updateLocalAssetFolder(code, folderId);
   }, []);
 
+  const renameFolder = useCallback(async (folderId: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return { ok: false as const, reason: "empty" as const };
+    const list = foldersRef.current;
+    const folder = list.find((item) => item.id === folderId);
+    if (!folder) return { ok: false as const, reason: "missing" as const };
+    if (
+      folder.name.localeCompare(trimmed, "es", { sensitivity: "accent" }) === 0
+    ) {
+      return { ok: true as const };
+    }
+    const sibling = findChildFolder(list, folder.parentId, trimmed);
+    if (sibling && sibling.id !== folderId) {
+      return { ok: false as const, reason: "duplicate" as const };
+    }
+    const updated: LibraryFolder = { ...folder, name: trimmed };
+    await putFolder(updated);
+    replaceFolders(list.map((item) => (item.id === folderId ? updated : item)));
+    return { ok: true as const };
+  }, []);
+
   const moveFolderToParent = useCallback(
     async (folderId: string, newParentId: string | null) => {
       const list = foldersRef.current;
@@ -427,6 +454,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       ensurePath,
       moveAssetToFolder,
       moveFolderToParent,
+      renameFolder,
     }),
     [
       allocateCodes,
@@ -441,6 +469,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       moveAssetToFolder,
       moveFolderToParent,
       ready,
+      renameFolder,
       saveUpload,
     ],
   );

@@ -17,8 +17,7 @@ function folderBrowseHref(folderId: string): string {
   return `/?carpeta=${encodeURIComponent(folderId)}`;
 }
 
-function stopCardNavigation(event: SyntheticEvent) {
-  event.preventDefault();
+function stopBubble(event: SyntheticEvent) {
   event.stopPropagation();
 }
 
@@ -60,11 +59,7 @@ export function AssetLocationEditor({
   const selectId = `${idPrefix}-ubicacion`;
 
   return (
-    <div
-      className={compact ? "space-y-1.5" : "space-y-2"}
-      onClick={stopCardNavigation}
-      onKeyDown={stopCardNavigation}
-    >
+    <div className={compact ? "space-y-1.5" : "space-y-2"}>
       <Label htmlFor={selectId} className={compact ? "sr-only" : undefined}>
         Ubicación
       </Label>
@@ -83,7 +78,7 @@ export function AssetLocationEditor({
               ? "h-9 w-full rounded-[10px] bg-white text-xs"
               : "h-10 w-full max-w-xl rounded-[10px] bg-white"
           }
-          onPointerDown={stopCardNavigation}
+          onPointerDown={compact ? stopBubble : undefined}
         >
           <SelectValue placeholder="Elige una carpeta…" />
         </SelectTrigger>
@@ -102,7 +97,6 @@ export function AssetLocationEditor({
         <Link
           href={folderBrowseHref(folderId)}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
-          onClick={stopCardNavigation}
         >
           <FolderOpenIcon className="size-4" />
           Ver en carpeta
