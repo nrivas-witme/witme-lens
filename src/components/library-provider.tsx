@@ -17,6 +17,7 @@ import {
   type DemoAsset,
 } from "@/lib/demo-data";
 import { migrateCountryFolderNames, seedBrandCalendarFolders } from "@/lib/folders";
+import { canMoveFolderInto } from "@/lib/library-dnd";
 import { folderMonth, folderYear } from "@/lib/format";
 import { resolveThemeFolderName } from "@/lib/upload-meta";
 import {
@@ -71,6 +72,7 @@ type LibraryContextValue = {
   deleteFolder: (id: string) => Promise<void>;
   ensurePath: (names: string[]) => Promise<string>;
   moveAssetToFolder: (code: string, folderId: string) => Promise<void>;
+  moveFolderToParent: (folderId: string, newParentId: string | null) => Promise<void>;
 };
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -361,6 +363,23 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     await updateLocalAssetFolder(code, folderId);
   }, []);
 
+  const moveFolderToParent = useCallback(
+    async (folderId: string, newParentId: string | null) => {
+      const list = foldersRef.current;
+      if (!canMoveFolderInto(list, folderId, newParentId)) {
+        throw new Error("No se puede mover la carpeta ahí");
+      }
+      const folder = list.find((item) => item.id === folderId);
+      if (!folder) return;
+      const updated: LibraryFolder = { ...folder, parentId: newParentId };
+      await putFolder(updated);
+      replaceFolders(
+        list.map((item) => (item.id === folderId ? updated : item)),
+      );
+    },
+    [],
+  );
+
   const deleteFolder = useCallback(
     async (id: string) => {
       const ids = descendantFolderIds(foldersRef.current, id);
@@ -407,6 +426,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       deleteFolder,
       ensurePath,
       moveAssetToFolder,
+      moveFolderToParent,
     }),
     [
       allocateCodes,
@@ -419,6 +439,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       folders,
       getAsset,
       moveAssetToFolder,
+      moveFolderToParent,
       ready,
       saveUpload,
     ],

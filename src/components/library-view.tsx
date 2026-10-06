@@ -1,35 +1,87 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type DragEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRightIcon,
-  FolderIcon,
   FolderPlusIcon,
+  GripVerticalIcon,
   SearchIcon,
-  TrashIcon,
 } from "lucide-react";
 import { AssetCard } from "@/components/asset-card";
 import { AssetLocationEditor } from "@/components/asset-location-editor";
-import {
-  confirmDeleteFolder,
-  folderPath,
-  useLibrary,
-} from "@/components/library-provider";
+import { LibraryFolderCard } from "@/components/library-folder-card";
+import { folderPath, useLibrary, type LibraryFolder } from "@/components/library-provider";
 import { CreativePreview } from "@/components/creative-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assetHref, catalogs } from "@/lib/demo-data";
 import { FOLDER_COUNTRY_CODES, compareFolderNames } from "@/lib/folders";
+import {
+  canMoveFolderInto,
+  DND_ASSET_MIME,
+  readDraggedAssetCode,
+  readDraggedFolderId,
+} from "@/lib/library-dnd";
 
 function folderHref(id: string | null): string {
   return id ? `/?carpeta=${encodeURIComponent(id)}` : "/";
 }
 
-function countLabel(count: number): string {
-  return `${count} ${count === 1 ? "elemento" : "elementos"}`;
+function BreadcrumbDropTarget({
+  label,
+  href,
+  folderId,
+  active,
+  folders,
+  onDrop,
+}: {
+  label: string;
+  href: string;
+  folderId: string | null;
+  active?: boolean;
+  folders: LibraryFolder[];
+  onDrop: (event: DragEvent) => void | Promise<void>;
+}) {
+  const [hover, setHover] = useState(false);
+
+  function allowDrop(event: DragEvent) {
+    const assetCode = readDraggedAssetCode(event.dataTransfer);
+    if (assetCode && folderId) {
+      event.preventDefault();
+      return;
+    }
+    const draggedFolderId = readDraggedFolderId(event.dataTransfer);
+    if (
+      draggedFolderId &&
+      canMoveFolderInto(folders, draggedFolderId, folderId)
+    ) {
+      event.preventDefault();
+    }
+  }
+
+  return (
+    <span
+      className={`rounded-[8px] px-1.5 py-1 transition-colors ${
+        hover ? "bg-brand-tint ring-1 ring-brand/30" : ""
+      } ${active ? "font-medium text-brand" : "text-brand"}`}
+      onDragOver={(event) => {
+        allowDrop(event);
+        setHover(true);
+      }}
+      onDragLeave={() => setHover(false)}
+      onDrop={(event) => {
+        setHover(false);
+        void onDrop(event);
+      }}
+    >
+      <Link href={href} className="hover:underline">
+        {label}
+      </Link>
+    </span>
+  );
 }
 
 export function LibraryView() {
@@ -42,6 +94,8 @@ export function LibraryView() {
     folderIdOf,
     createFolder,
     deleteFolder,
+    moveAssetToFolder,
+    moveFolderToParent,
   } = useLibrary();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -98,6 +152,25 @@ export function LibraryView() {
     : "/subir";
   const countrySuggestions = !searching && path.length === 3;
   const themeSuggestions = !searching && path.length === 4;
+
+  async function handleDropOnFolder(
+    event: DragEvent,
+    targetFolderId: string | null,
+  ) {
+    event.preventDefault();
+    const assetCode = readDraggedAssetCode(event.dataTransfer);
+    if (assetCode && targetFolderId) {
+      await moveAssetToFolder(assetCode, targetFolderId);
+      return;
+    }
+    const draggedFolderId = readDraggedFolderId(event.dataTransfer);
+    if (
+      draggedFolderId &&
+      canMoveFolderInto(folders, draggedFolderId, targetFolderId)
+    ) {
+      await moveFolderToParent(draggedFolderId, targetFolderId);
+    }
+  }
   const empty = childFolders.length === 0 && filteredAssets.length === 0 && !creating;
 
   async function handleCreate(event: FormEvent) {
@@ -155,23 +228,33 @@ export function LibraryView() {
         aria-label="Ruta de carpetas"
         className="mt-6 flex flex-wrap items-center gap-1 text-sm"
       >
-        <Link href="/" className="rounded-[8px] px-1.5 py-1 text-brand hover:underline">
-          Biblioteca
-        </Link>
+        <BreadcrumbDropTarget
+          label="Biblioteca"
+          href="/"
+          folderId={null}
+          folders={folders}
+          onDrop={(event) => handleDropOnFolder(event, null)}
+        />
         {path.map((folder) => (
           <span key={folder.id} className="flex items-center gap-1">
             <ChevronRightIcon className="size-4 text-muted-foreground" />
-            <Link
+            <BreadcrumbDropTarget
+              label={folder.name}
               href={folderHref(folder.id)}
-              className={`rounded-[8px] px-1.5 py-1 hover:underline ${
-                folder.id === currentId ? "font-medium text-brand" : "text-brand"
-              }`}
-            >
-              {folder.name}
-            </Link>
+              folderId={folder.id}
+              active={folder.id === currentId}
+              folders={folders}
+              onDrop={(event) => handleDropOnFolder(event, folder.id)}
+            />
           </span>
         ))}
       </nav>
+      {!searching ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Arrastra creatividades o carpetas (icono ≡) sobre otra carpeta o la ruta
+          de arriba para moverlas.
+        </p>
+      ) : null}
 
       <form className="mt-6" onSubmit={(event) => event.preventDefault()}>
         <Label htmlFor="buscar">Busca por ID o nombre</Label>
@@ -201,22 +284,36 @@ export function LibraryView() {
           <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {recentAssets.map((asset) => (
               <li key={asset.code} className="rounded-[10px] p-1 hover:bg-brand-tint">
-                <Link
-                  href={assetHref(asset.code)}
-                  className="block"
-                  aria-label={`Ver ficha de ${asset.code}`}
-                >
-                  <span className="flex h-16 items-center justify-center overflow-hidden rounded-[8px] bg-[#f0f4f8] ring-1 ring-border">
-                    <CreativePreview
-                      asset={asset}
-                      compact
-                      className="h-full w-full"
-                    />
-                  </span>
-                  <span className="mt-1 block truncate text-center font-mono text-[11px] text-brand">
-                    {asset.code}
-                  </span>
-                </Link>
+                <div className="relative">
+                  <button
+                    type="button"
+                    draggable
+                    className="absolute top-1 left-1 z-10 cursor-grab rounded-[6px] bg-white/90 p-1 text-muted-foreground shadow-sm active:cursor-grabbing"
+                    aria-label={`Arrastrar ${asset.code}`}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData(DND_ASSET_MIME, asset.code);
+                      event.dataTransfer.effectAllowed = "move";
+                    }}
+                  >
+                    <GripVerticalIcon className="size-3.5" />
+                  </button>
+                  <Link
+                    href={assetHref(asset.code)}
+                    className="block"
+                    aria-label={`Ver ficha de ${asset.code}`}
+                  >
+                    <span className="flex h-16 items-center justify-center overflow-hidden rounded-[8px] bg-[#f0f4f8] ring-1 ring-border">
+                      <CreativePreview
+                        asset={asset}
+                        compact
+                        className="h-full w-full"
+                      />
+                    </span>
+                    <span className="mt-1 block truncate text-center font-mono text-[11px] text-brand">
+                      {asset.code}
+                    </span>
+                  </Link>
+                </div>
                 <div className="mt-1 px-0.5">
                   <AssetLocationEditor
                     code={asset.code}
@@ -341,42 +438,21 @@ export function LibraryView() {
                     const total = nestedFolders + nestedFiles;
                     return (
                       <li key={folder.id}>
-                        <div className="relative rounded-[16px] bg-white shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-1 ring-border">
-                          <Link
-                            href={folderHref(folder.id)}
-                            className="flex items-start gap-3 p-4 pr-12"
-                          >
-                            <FolderIcon className="mt-0.5 size-8 shrink-0 text-brand" />
-                            <span>
-                              <span className="block font-medium text-brand">
-                                {folder.name}
-                              </span>
-                              <span className="mt-1 block text-sm text-muted-foreground">
-                                {countLabel(total)}
-                              </span>
-                            </span>
-                          </Link>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2 rounded-[10px] text-muted-foreground"
-                            aria-label={`Eliminar carpeta ${folder.name}`}
-                            onClick={async () => {
-                              if (!confirmDeleteFolder(folder.name)) return;
-                              const parentHref = folderHref(folder.parentId);
-                              await deleteFolder(folder.id);
-                              if (
-                                currentId === folder.id ||
-                                path.some((item) => item.id === folder.id)
-                              ) {
-                                router.push(parentHref);
-                              }
-                            }}
-                          >
-                            <TrashIcon />
-                          </Button>
-                        </div>
+                        <LibraryFolderCard
+                          folderId={folder.id}
+                          name={folder.name}
+                          total={total}
+                          folderHref={folderHref(folder.id)}
+                          onNavigateAfterDelete={() => {
+                            const parentHref = folderHref(folder.parentId);
+                            if (
+                              currentId === folder.id ||
+                              path.some((item) => item.id === folder.id)
+                            ) {
+                              router.push(parentHref);
+                            }
+                          }}
+                        />
                       </li>
                     );
                   })}

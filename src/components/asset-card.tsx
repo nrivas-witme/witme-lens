@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { TrashIcon } from "lucide-react";
+import { GripVerticalIcon, TrashIcon } from "lucide-react";
+import { DND_ASSET_MIME } from "@/lib/library-dnd";
 import { BrandLogo } from "@/components/brand-logo";
 import { confirmDeleteAsset, useLibrary } from "@/components/library-provider";
 import { Card } from "@/components/ui/card";
@@ -19,13 +20,27 @@ export function AssetCard({ asset }: { asset: DemoAsset }) {
   return (
     <Card className="rounded-[16px] py-0 shadow-[0_8px_24px_rgba(49,82,112,0.06)] ring-border">
       <div className="relative">
-        <Link
-          href={assetHref(asset.code)}
-          aria-label={`Ver ficha de ${asset.code}: ${asset.title}`}
-          className="flex h-56 items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8]"
-        >
-          <CreativePreview asset={asset} className="h-full w-full" />
-        </Link>
+        <div className="relative flex h-56 items-center justify-center overflow-hidden rounded-t-[16px] bg-[#f0f4f8]">
+          <button
+            type="button"
+            draggable
+            className="absolute top-2 left-2 z-10 cursor-grab rounded-[8px] bg-white/90 p-1.5 text-muted-foreground shadow-sm hover:bg-white active:cursor-grabbing"
+            aria-label={`Arrastrar ${asset.code} a otra carpeta`}
+            onDragStart={(event) => {
+              event.dataTransfer.setData(DND_ASSET_MIME, asset.code);
+              event.dataTransfer.effectAllowed = "move";
+            }}
+          >
+            <GripVerticalIcon className="size-4" />
+          </button>
+          <Link
+            href={assetHref(asset.code)}
+            aria-label={`Ver ficha de ${asset.code}: ${asset.title}`}
+            className="flex h-full w-full items-center justify-center"
+          >
+            <CreativePreview asset={asset} className="h-full w-full" />
+          </Link>
+        </div>
         <div
           className="absolute inset-x-0 bottom-0 border-t border-border/60 bg-white/95 p-2 backdrop-blur-sm"
           onClick={(event) => event.stopPropagation()}
