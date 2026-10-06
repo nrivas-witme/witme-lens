@@ -1,9 +1,12 @@
 "use client";
 
-import { type DragEvent } from "react";
+import { useState, type DragEvent } from "react";
 import Link from "next/link";
 import { FolderIcon, GripVerticalIcon, TrashIcon } from "lucide-react";
-import { FolderRenameControl } from "@/components/folder-rename-control";
+import {
+  FolderRenameControl,
+  FolderRenameEditButton,
+} from "@/components/folder-rename-control";
 import { confirmDeleteFolder, useLibrary } from "@/components/library-provider";
 import { Button } from "@/components/ui/button";
 import { useDropHighlight } from "@/hooks/use-drop-highlight";
@@ -35,6 +38,7 @@ export function LibraryFolderCard({
 }) {
   const { folders, deleteFolder, moveAssetToFolder, moveFolderToParent } = useLibrary();
   const dropHighlight = useDropHighlight();
+  const [renaming, setRenaming] = useState(false);
 
   function allowDrop(event: DragEvent) {
     if (dragCarriesAsset(event.dataTransfer)) {
@@ -78,7 +82,7 @@ export function LibraryFolderCard({
       onDragLeave={dropHighlight.onDragLeave}
       onDrop={(event) => void handleDrop(event)}
     >
-      <div className="flex items-start gap-1 p-4 pr-20">
+      <div className="flex items-start gap-1 p-4 pr-[4.5rem]">
         <button
           type="button"
           draggable
@@ -97,27 +101,44 @@ export function LibraryFolderCard({
             <FolderIcon className="size-8 text-brand" />
           </Link>
           <div className="min-w-0 flex-1">
-            <FolderRenameControl folderId={folderId} name={name} variant="card" />
-            <span className="mt-1 block text-sm text-muted-foreground">
-              {countLabel(total)}
-            </span>
+            <FolderRenameControl
+              folderId={folderId}
+              name={name}
+              variant="card"
+              hideEditButton
+              editing={renaming}
+              onEditingChange={setRenaming}
+            />
+            {!renaming ? (
+              <span className="mt-1 block text-sm text-muted-foreground">
+                {countLabel(total)}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="absolute top-2 right-2 rounded-[10px] text-muted-foreground"
-        aria-label={`Eliminar carpeta ${name}`}
-        onClick={async () => {
-          if (!confirmDeleteFolder(name)) return;
-          await deleteFolder(folderId);
-          onNavigateAfterDelete?.();
-        }}
-      >
-        <TrashIcon />
-      </Button>
+      <div className="absolute top-2 right-2 flex items-center">
+        {!renaming ? (
+          <FolderRenameEditButton
+            folderName={name}
+            onClick={() => setRenaming(true)}
+          />
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-9 rounded-[10px] text-muted-foreground"
+          aria-label={`Eliminar carpeta ${name}`}
+          onClick={async () => {
+            if (!confirmDeleteFolder(name)) return;
+            await deleteFolder(folderId);
+            onNavigateAfterDelete?.();
+          }}
+        >
+          <TrashIcon />
+        </Button>
+      </div>
     </div>
   );
 }

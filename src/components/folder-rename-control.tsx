@@ -6,10 +6,6 @@ import { useLibrary } from "@/components/library-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export type RenameFolderResult =
-  | { ok: true }
-  | { ok: false; reason: "empty" | "duplicate" | "missing" };
-
 function renameErrorMessage(reason: "empty" | "duplicate" | "missing"): string {
   if (reason === "duplicate") return "Ya hay una carpeta con ese nombre aquí.";
   if (reason === "empty") return "Escribe un nombre para la carpeta.";
@@ -20,13 +16,23 @@ export function FolderRenameControl({
   folderId,
   name,
   variant = "card",
+  hideEditButton = false,
+  editing: controlledEditing,
+  onEditingChange,
 }: {
   folderId: string;
   name: string;
   variant?: "card" | "inline";
+  /** Oculta el lápiz junto al título (p. ej. si va en la barra de acciones). */
+  hideEditButton?: boolean;
+  editing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
 }) {
   const { renameFolder } = useLibrary();
-  const [editing, setEditing] = useState(false);
+  const [internalEditing, setInternalEditing] = useState(false);
+  const editing = controlledEditing ?? internalEditing;
+  const setEditing = onEditingChange ?? setInternalEditing;
+
   const [draft, setDraft] = useState(name);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -56,7 +62,11 @@ export function FolderRenameControl({
   if (editing) {
     return (
       <form
-        className={variant === "card" ? "min-w-0 flex-1 space-y-2" : "flex flex-wrap items-center gap-2"}
+        className={
+          variant === "card"
+            ? "min-w-0 flex-1 space-y-2"
+            : "flex flex-wrap items-center gap-2"
+        }
         onSubmit={(event) => void submit(event)}
         onClick={stopNav}
       >
@@ -121,36 +131,50 @@ export function FolderRenameControl({
     return (
       <div className="flex items-center gap-1">
         <span className="text-sm font-medium text-brand">{name}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 rounded-[10px] text-muted-foreground"
-          aria-label={`Renombrar carpeta ${name}`}
-          onClick={() => setEditing(true)}
-        >
-          <PencilIcon className="size-4" />
-        </Button>
+        {!hideEditButton ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-[10px] text-muted-foreground"
+            aria-label={`Renombrar carpeta ${name}`}
+            onClick={() => setEditing(true)}
+          >
+            <PencilIcon className="size-4" />
+          </Button>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-start gap-1">
-      <span className="block min-w-0 truncate font-medium text-brand">{name}</span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0 rounded-[10px] text-muted-foreground"
-        aria-label={`Renombrar carpeta ${name}`}
-        onClick={(event) => {
-          stopNav(event);
-          setEditing(true);
-        }}
-      >
-        <PencilIcon className="size-4" />
-      </Button>
-    </div>
+    <span className="block min-w-0 truncate font-medium text-brand">{name}</span>
+  );
+}
+
+export function FolderRenameEditButton({
+  folderName,
+  onClick,
+  className,
+}: {
+  folderName: string;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className={className ?? "size-9 rounded-[10px] text-muted-foreground"}
+      aria-label={`Renombrar carpeta ${folderName}`}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
+    >
+      <PencilIcon className="size-4" />
+    </Button>
   );
 }
