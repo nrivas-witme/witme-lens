@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { DemoBanner } from "@/components/demo-banner";
 import { HomeLink } from "@/components/home-link";
 import { Wordmark } from "@/components/wordmark";
 
@@ -12,7 +11,6 @@ export function AppShell({
 }) {
   return (
     <div className="flex min-h-full flex-col">
-      <DemoBanner />
       <header className="border-b border-border bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <HomeLink

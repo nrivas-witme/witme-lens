@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { DemoBanner } from "@/components/demo-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Wordmark } from "@/components/wordmark";
@@ -7,7 +6,6 @@ import { Wordmark } from "@/components/wordmark";
 export function AccessView({ denied }: { denied: boolean }) {
   return (
     <div className="flex min-h-full flex-col bg-background">
-      <DemoBanner />
       <main
         id="contenido"
         className="flex flex-1 items-center justify-center px-4 py-16"

@@ -199,7 +199,7 @@ export function LibraryView() {
                   localCount > 0
                     ? ` · ${localCount} ${localCount === 1 ? "subida" : "subidas"} en este navegador`
                     : " de demostración"
-                }. Nada está sincronizado.`
+                }.`
               : "Cargando biblioteca…"}
           </p>
         </div>
@@ -230,36 +230,32 @@ export function LibraryView() {
         </div>
       </div>
 
-      <nav
-        aria-label="Ruta de carpetas"
-        className="mt-6 flex flex-wrap items-center gap-1 text-sm"
-      >
-        <BreadcrumbDropTarget
-          label="Biblioteca"
-          href="/"
-          folderId={null}
-          folders={folders}
-          onDrop={(event) => handleDropOnFolder(event, null)}
-        />
-        {path.map((folder) => (
-          <span key={folder.id} className="flex items-center gap-1">
-            <ChevronRightIcon className="size-4 text-muted-foreground" />
-            <BreadcrumbDropTarget
-              label={folder.name}
-              href={folderHref(folder.id)}
-              folderId={folder.id}
-              active={folder.id === currentId}
-              folders={folders}
-              onDrop={(event) => handleDropOnFolder(event, folder.id)}
-            />
-          </span>
-        ))}
-      </nav>
-      {!searching ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Arrastra la miniatura de una creatividad o el icono ≡ de una carpeta sobre
-          otra carpeta (se resalta al soltar).
-        </p>
+      {path.length > 0 ? (
+        <nav
+          aria-label="Ruta de carpetas"
+          className="mt-6 flex flex-wrap items-center gap-1 text-sm"
+        >
+          <BreadcrumbDropTarget
+            label="Biblioteca"
+            href="/"
+            folderId={null}
+            folders={folders}
+            onDrop={(event) => handleDropOnFolder(event, null)}
+          />
+          {path.map((folder) => (
+            <span key={folder.id} className="flex items-center gap-1">
+              <ChevronRightIcon className="size-4 text-muted-foreground" />
+              <BreadcrumbDropTarget
+                label={folder.name}
+                href={folderHref(folder.id)}
+                folderId={folder.id}
+                active={folder.id === currentId}
+                folders={folders}
+                onDrop={(event) => handleDropOnFolder(event, folder.id)}
+              />
+            </span>
+          ))}
+        </nav>
       ) : null}
 
       <form className="mt-6" onSubmit={(event) => event.preventDefault()}>
@@ -466,10 +462,6 @@ export function LibraryView() {
                     </li>
                   ))}
                 </ul>
-              ) : !searching && childFolders.length > 0 ? (
-                <p className="mt-8 text-sm text-muted-foreground">
-                  No hay creatividades en esta carpeta.
-                </p>
               ) : null}
             </>
           )}
